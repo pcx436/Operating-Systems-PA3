@@ -50,6 +50,7 @@ struct requestArg {
     int *currentInput;
     char *logFile;
     char **sharedBuffer;
+    int *currentBufferIndex;
 };
 
 void *requesterThread(void* args){
@@ -57,7 +58,17 @@ void *requesterThread(void* args){
     ssize_t numReadBytes;
 
     struct requestArg reqArgs = *(struct requestArg*) args;
-    char *fName = reqArgs.inputFiles[0];
+
+    // TODO: Will be a critical section. Protect with mutex?
+    int currentInput = *reqArgs.currentInput;
+    if(currentInput == reqArgs.numInputs){
+        fprintf(stderr, "WARNING: Requester thread spawned with no more files to parse.\n");
+        return NULL;
+    }
+
+    char *fName = reqArgs.inputFiles[currentInput];
+    *reqArgs.currentInput += 1;
+    // END CRITICAL SECTION
 
     FILE *fp = fopen(fName, "r");
     if (fp == NULL){
@@ -69,6 +80,13 @@ void *requesterThread(void* args){
     while ((numReadBytes = getline(&lineBuff, &lineBuffSize, fp)) != -1){
         if(lineBuff[numReadBytes - 1] == '\n') // remove newline characters if found
             lineBuff[numReadBytes - 1] = '\0';
+
+        // CRITICAL SECTION
+        if (*reqArgs.currentBufferIndex != BUFFER_SIZE) {
+            // TODO: Since lineBuff is a pointer, does it getting changed change all of the values in the shared buffer?
+            reqArgs.sharedBuffer[*reqArgs.currentBufferIndex] = lineBuff;
+            *reqArgs.currentBufferIndex += 1;
+        }
         printf("Line: \"%s\", %zu\n", lineBuff, numReadBytes);
     }
 
@@ -125,11 +143,12 @@ int main(int argc, char *argv[]){
 
     // create requester arg struct
     struct requestArg reqArgs;
-    int currentRequesterInput = 0;
+    int currentRequesterInput = 0, currentBufferIndex = 0;
     reqArgs.numInputs = numInputs;
     reqArgs.inputFiles = inputFiles;
     reqArgs.currentInput = &currentRequesterInput;
     reqArgs.sharedBuffer = sharedBuffer;
+    reqArgs.currentBufferIndex = &currentBufferIndex;
     // TODO: Setup logging to file
 
     // TODO: create resolver arg struct
