@@ -52,8 +52,8 @@ struct requestArg {
 };
 
 void *requesterThread(void* args){
-    size_t len = MAX_NAME_LENGTH * sizeof(char);
-    ssize_t read;
+    size_t lineBuffSize = MAX_NAME_LENGTH * sizeof(char);
+    ssize_t numReadBytes;
 
     struct requestArg reqArgs = *(struct requestArg*) args;
     char *fName = reqArgs.inputFiles[0];
@@ -64,15 +64,15 @@ void *requesterThread(void* args){
         return NULL;
     }
 
-    char *line = (char *)malloc(len);
-    while ((read = getline(&line, &len, fp)) != -1){
-        if(line[read - 1] == '\n')
-            line[read - 1] = '\0';
-        printf("Line: \"%s\", %zu\n", line, read);
+    char *lineBuff = (char *)malloc(lineBuffSize);
+    while ((numReadBytes = getline(&lineBuff, &lineBuffSize, fp)) != -1){
+        if(lineBuff[numReadBytes - 1] == '\n') // remove newline characters if found
+            lineBuff[numReadBytes - 1] = '\0';
+        printf("Line: \"%s\", %zu\n", lineBuff, numReadBytes);
     }
 
     fclose(fp);
-    free(line);
+    free(lineBuff);
     return NULL;
 }
 
