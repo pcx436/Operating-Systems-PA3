@@ -25,7 +25,9 @@
 #define FEW_ARGS 6
 #define BAD_INPUT 7
 
+// CONSTANTS
 #define BASE 10
+#define BUFFER_SIZE 25
 
 int dnsTest(){
     int ret;
@@ -46,6 +48,7 @@ struct requestArg {
     char **inputFiles;
     int numInputs;
     char *logFile;
+    char **sharedBuffer;
 };
 
 void *requesterThread(void* args){
@@ -79,7 +82,7 @@ int main(int argc, char *argv[]){
     int numRequester, numResolver;
     int numInputs = argc > 5 ? argc - 5 : 0;
     int i;
-    char *ptr, *requestLog, *resolveLog, *inputFiles[MAX_INPUT_FILES];
+    char *ptr, *requestLog, *resolveLog, *inputFiles[MAX_INPUT_FILES], *sharedBuffer[BUFFER_SIZE];
 
     if (argc < 6){
         fprintf(stderr, "Too few arguments!\n");
@@ -123,6 +126,8 @@ int main(int argc, char *argv[]){
     struct requestArg reqArgs;
     reqArgs.numInputs = numInputs;
     reqArgs.inputFiles = inputFiles;
+    reqArgs.sharedBuffer = sharedBuffer;
+    // TODO: Setup logging to file
 
     // TODO: create resolver arg struct
 
