@@ -47,6 +47,7 @@ int dnsTest(){
 struct requestArg {
     char **inputFiles;
     int numInputs;
+    int *currentInput;
     char *logFile;
     char **sharedBuffer;
 };
@@ -124,8 +125,10 @@ int main(int argc, char *argv[]){
 
     // create requester arg struct
     struct requestArg reqArgs;
+    int currentRequesterInput = 0;
     reqArgs.numInputs = numInputs;
     reqArgs.inputFiles = inputFiles;
+    reqArgs.currentInput = &currentRequesterInput;
     reqArgs.sharedBuffer = sharedBuffer;
     // TODO: Setup logging to file
 
