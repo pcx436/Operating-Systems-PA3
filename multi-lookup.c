@@ -160,6 +160,8 @@ void *resolverThread(void* args){
             fprintf(stderr, "Could not write \"%s\" to \"%s\"!\n", currentIP, currentName);
         }
 
+        fclose(fp);
+
         if(resArg->currentInput == resArg->numInputs && resArg->currentBufferIndex == 0)
             break;
 
@@ -168,7 +170,6 @@ void *resolverThread(void* args){
         sem_post(space_available);
     }
 
-    fclose(fp);
     free(currentIP);
     return NULL;
 }
