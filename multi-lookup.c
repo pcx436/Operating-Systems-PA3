@@ -116,7 +116,7 @@ void *resolverThread(void* args){
     sem_t *space_available = resArg->space_available, *items_available = resArg->items_available;
     pthread_mutex_t *accessLock = resArg->accessLock;
     // pthread_mutex_t *logLock = resArg->resolverLogLock;
-    char *currentIP = (char *)malloc(MAX_NAME_LENGTH * sizeof(char)), *currentName;
+    char *currentIP = (char *)malloc(MAX_IP_LENGTH * sizeof(char)), *currentName;
     int resolutionResult;
 
     // CRITICAL SECTION - file access
