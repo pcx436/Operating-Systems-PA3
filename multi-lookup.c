@@ -116,6 +116,13 @@ void *requesterThread(void* args){
     return NULL;
 }
 
+void *resolverThread(void* args){
+    struct resolveArg *resArg = (struct resolveArg *)args;
+    sem_t *space_available = resArg->space_available, *items_available = resArg->items_available;
+    pthread_mutex_t *accessLock = resArg->accessLock;
+    return NULL;
+}
+
 int main(int argc, char *argv[]){
     pthread_t requesterIDs[MAX_REQUESTER_THREADS];
     int i, numRequester, numResolver;
