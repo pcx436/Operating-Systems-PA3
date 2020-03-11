@@ -17,13 +17,13 @@
 #define MAX_IP_LENGTH INET6_ADDRSTRLEN
 
 // ERRORS
-#define NUM_INPUT 1
-#define NUM_RESOLVER 2
-#define NUM_REQUESTER 3
-#define LEN_NAME 4
-#define LEN_IP 5
-#define FEW_ARGS 6
-#define BAD_INPUT 7
+#define ERR_NUM_INPUT 1
+#define ERR_NUM_RESOLVER 2
+#define ERR_NUM_REQUESTER 3
+#define ERR_LEN_NAME 4
+#define ERR_LEN_IP 5
+#define ERR_FEW_ARGS 6
+#define ERR_BAD_INPUT 7
 
 // CONSTANTS
 #define BASE 10
@@ -105,11 +105,11 @@ int main(int argc, char *argv[]){
 
     if (argc < 6){
         fprintf(stderr, "Too few arguments!\n");
-        return FEW_ARGS;
+        return ERR_FEW_ARGS;
     }
     else if (numInputs > MAX_INPUT_FILES) {
         fprintf(stderr, "Too many input files, max %d!\n", MAX_INPUT_FILES);
-        return NUM_INPUT;
+        return ERR_NUM_INPUT;
     }
 
     // Parse CMD args
@@ -120,11 +120,11 @@ int main(int argc, char *argv[]){
 
     if (numRequester > MAX_REQUESTER_THREADS){
         fprintf(stderr, "Max number of requester threads %d\n", MAX_REQUESTER_THREADS);
-        return NUM_REQUESTER;
+        return ERR_NUM_REQUESTER;
     }
     else if (numResolver > MAX_RESOLVER_THREADS){
         fprintf(stderr, "Max number of resolver threads %d\n", MAX_RESOLVER_THREADS);
-        return NUM_RESOLVER;
+        return ERR_NUM_RESOLVER;
     }
 
     // Grab the input files
