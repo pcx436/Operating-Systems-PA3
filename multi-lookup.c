@@ -43,22 +43,14 @@ int dnsTest(){
     }
 }
 
-struct requestArg {
+struct threadArgs {
     char **inputFiles;
     int numInputs;
-    int *currentInput;
-    char *logFile;
+    int currentInput;
+    char *requesterLog;
+    char *resolverLog;
     char **sharedBuffer;
-    int *currentBufferIndex;
-    sem_t *space_available;
-    sem_t *items_available;
-    pthread_mutex_t *accessLock;
-};
-
-struct resolveArg {
-    char *logFile;
-    char **sharedBuffer;
-    int *currentBufferIndex;
+    int currentBufferIndex;
     sem_t *space_available;
     sem_t *items_available;
     pthread_mutex_t *accessLock;
@@ -68,13 +60,13 @@ void *requesterThread(void* args){
     size_t lineBuffSize = MAX_NAME_LENGTH * sizeof(char);
     ssize_t numReadBytes;
 
-    struct requestArg *reqArgs = (struct requestArg*) args;
+    struct threadArgs *reqArgs = (struct threadArgs*) args;
     pthread_mutex_t *accessLock = reqArgs->accessLock;
     sem_t *space_available = reqArgs->space_available, *items_available = reqArgs->items_available;
 
     // TODO: Will be a critical section. Protect with mutex?
     pthread_mutex_lock(accessLock);
-    int currentInput = *reqArgs->currentInput;
+    int currentInput = reqArgs->currentInput;
     if(currentInput == reqArgs->numInputs){
         fprintf(stderr, "WARNING: Requester thread spawned with no more files to parse.\n");
         pthread_mutex_unlock(accessLock);
@@ -82,7 +74,7 @@ void *requesterThread(void* args){
     }
 
     char *fName = reqArgs->inputFiles[currentInput];
-    *reqArgs->currentInput += 1;
+    reqArgs->currentInput += 1;
     pthread_mutex_unlock(accessLock);
     // END CRITICAL SECTION
 
@@ -101,8 +93,8 @@ void *requesterThread(void* args){
         sem_wait(space_available);
         pthread_mutex_lock(accessLock);
 
-        reqArgs->sharedBuffer[*reqArgs->currentBufferIndex] = lineBuff;
-        *reqArgs->currentBufferIndex += 1;
+        reqArgs->sharedBuffer[reqArgs->currentBufferIndex] = lineBuff;
+        reqArgs->currentBufferIndex += 1;
 
         pthread_mutex_unlock(accessLock);
         sem_post(items_available);
@@ -117,19 +109,29 @@ void *requesterThread(void* args){
 }
 
 void *resolverThread(void* args){
-    struct resolveArg *resArg = (struct resolveArg *)args;
+    struct threadArgs *resArg = (struct threadArgs *)args;
     sem_t *space_available = resArg->space_available, *items_available = resArg->items_available;
     pthread_mutex_t *accessLock = resArg->accessLock;
 
     // CRITICAL SECTION - file access
     pthread_mutex_lock(accessLock);
-    FILE *fp = fopen(resArg->logFile, "w");
+    char *logFileName = resArg->resolverLog;
     pthread_mutex_unlock(accessLock);
     // END CRITICAL SECTION
+
+    FILE *fp = fopen(logFileName, "w");
     if(fp == NULL){
         // yes, I'm access a shared resource, but it's not being modified so does it really matter?
-        fprintf(stderr, "Could not open resolver results file \"%s\"!\n", resArg->logFile);
+        fprintf(stderr, "Could not open resolver results file \"%s\"!\n", logFileName);
         return NULL;
+    }
+
+    while(1){
+        sem_wait(items_available);
+        pthread_mutex_lock(accessLock);
+
+        pthread_mutex_unlock(accessLock);
+        sem_post(space_available);
     }
 
     fclose(fp);
@@ -139,9 +141,8 @@ void *resolverThread(void* args){
 int main(int argc, char *argv[]){
     pthread_t requesterIDs[MAX_REQUESTER_THREADS];
     int i, numRequester, numResolver;
-    int currentRequesterInput = 0, currentBufferIndex = 0;
     int numInputs = argc > 5 ? argc - 5 : 0;
-    char *ptr, *requestLog, *resolveLog, *inputFiles[MAX_INPUT_FILES], *sharedBuffer[BUFFER_SIZE];
+    char *ptr, *requesterLog, *resolverLog, *inputFiles[MAX_INPUT_FILES], *sharedBuffer[BUFFER_SIZE];
     sem_t space_available, items_available;
     pthread_mutex_t accessLock;
 
@@ -157,8 +158,8 @@ int main(int argc, char *argv[]){
     // Parse CMD args
     numRequester = (int)strtol(argv[1], &ptr, BASE);
     numResolver = (int)strtol(argv[2], &ptr, BASE);
-    requestLog = argv[3];
-    resolveLog = argv[4];
+    requesterLog = argv[3];
+    resolverLog = argv[4];
 
     if (numRequester > MAX_REQUESTER_THREADS){
         fprintf(stderr, "Max number of requester threads %d\n", MAX_REQUESTER_THREADS);
@@ -176,8 +177,8 @@ int main(int argc, char *argv[]){
 
     printf("Number of requesters: %d\n", numRequester);
     printf("Number of resolvers: %d\n", numResolver);
-    printf("Requester log: %s\n", requestLog);
-    printf("Resolver log: %s\n", resolveLog);
+    printf("Requester log: %s\n", requesterLog);
+    printf("Resolver log: %s\n", resolverLog);
     printf("Number of input files: %d\n", numInputs);
     printf("Input files:\n");
     for(i = 0; i < numInputs; i++)
@@ -189,23 +190,23 @@ int main(int argc, char *argv[]){
     pthread_mutex_init(&accessLock, NULL);
 
     // create requester arg struct
-    struct requestArg reqArgs;
-    reqArgs.numInputs = numInputs;
-    reqArgs.inputFiles = inputFiles;
-    reqArgs.currentInput = &currentRequesterInput;
-    reqArgs.sharedBuffer = sharedBuffer;
-    reqArgs.space_available = &space_available;
-    reqArgs.items_available = &items_available;
-    reqArgs.currentBufferIndex = &currentBufferIndex;
-    reqArgs.accessLock = &accessLock;
+    struct threadArgs tArgs;
+    tArgs.numInputs = numInputs;
+    tArgs.inputFiles = inputFiles;
+    tArgs.currentInput = 0;
+    tArgs.sharedBuffer = sharedBuffer;
+    tArgs.space_available = &space_available;
+    tArgs.items_available = &items_available;
+    tArgs.currentBufferIndex = 0;
+    tArgs.accessLock = &accessLock;
+    tArgs.resolverLog = resolverLog;
+    tArgs.requesterLog = requesterLog;
 
     // TODO: Setup logging to file
 
-    // TODO: create resolver arg struct
-
     // Spawn requester threads
     for(i = 0; i < numRequester; i++){
-        pthread_create(&requesterIDs[i], NULL, requesterThread, (void *)&reqArgs);
+        pthread_create(&requesterIDs[i], NULL, requesterThread, (void *)&tArgs);
     }
 
     // Join requester threads
