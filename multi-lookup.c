@@ -124,17 +124,45 @@ void *resolverThread(void* args){
     pthread_mutex_unlock(accessLock);
     // END CRITICAL SECTION
 
-    FILE *fp = fopen(logFileName, "w");
-    if(fp == NULL){
-        // yes, I'm access a shared resource, but it's not being modified so does it really matter?
-        fprintf(stderr, "Could not open resolver results file \"%s\"!\n", logFileName);
-        return NULL;
-    }
-
+    // FIXME: Bad practice to have while(1), fix with bool instead of break?
     while(1){
         sem_wait(items_available);
         pthread_mutex_lock(accessLock);
 
+        // retrieve name and decrement (in that order)
+        currentName = resArg->sharedBuffer[resArg->currentBufferIndex--];
+        resolutionResult = dnslookup(currentName, currentIP, MAX_NAME_LENGTH);
+
+        if(resolutionResult == UTIL_FAILURE){
+            fprintf(stderr, "Could not resolve name \"%s\"!\n", currentName);
+            pthread_mutex_unlock(accessLock);
+
+            // FIXME: Should somehow return ERR_BAD_NAME or something...
+            return NULL;
+        }
+
+        // open file to write something from the queue
+        // pthread_mutex_lock(logLock);
+        FILE *fp = fopen(logFileName, "a");
+        if(fp == NULL){
+            // yes, I'm access a shared resource, but it's not being modified so does it really matter?
+            fprintf(stderr, "Could not open resolver results file \"%s\"!\n", logFileName);
+            // pthread_mutex_unlock(logLock);
+            pthread_mutex_unlock(accessLock);
+
+            // FIXME: Should somehow return ERR_BAD_FILE or something...
+            return NULL;
+        }
+
+        // write to file
+        if(fputs(currentIP, fp) == EOF){
+            fprintf(stderr, "Could not write \"%s\" to \"%s\"!\n", currentIP, currentName);
+        }
+
+        if(resArg->currentInput == resArg->numInputs && resArg->currentBufferIndex == 0)
+            break;
+
+        // pthread_mutex_unlock(logLock);
         pthread_mutex_unlock(accessLock);
         sem_post(space_available);
     }
