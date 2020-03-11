@@ -7,7 +7,6 @@
 #include <util.h>
 #include <stdlib.h>
 #include <semaphore.h>
-// #include <arpa/inet.h>
 
 // LIMITS
 #define MAX_INPUT_FILES 10
@@ -100,11 +99,9 @@ void *requesterThread(void* args){
 }
 
 int main(int argc, char *argv[]){
-    // return dnsTest();
     pthread_t requesterIDs[MAX_REQUESTER_THREADS];
-    int numRequester, numResolver;
+    int i, numRequester, numResolver;
     int numInputs = argc > 5 ? argc - 5 : 0;
-    int i;
     char *ptr, *requestLog, *resolveLog, *inputFiles[MAX_INPUT_FILES], *sharedBuffer[BUFFER_SIZE];
 
     if (argc < 6){
