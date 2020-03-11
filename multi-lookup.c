@@ -138,6 +138,7 @@ void *resolverThread(void* args){
             fprintf(stderr, "Could not resolve name \"%s\"!\n", currentName);
             pthread_mutex_unlock(accessLock);
 
+            free(currentIP);
             // FIXME: Should somehow return ERR_BAD_NAME or something...
             return NULL;
         }
