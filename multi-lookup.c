@@ -173,7 +173,7 @@ void *resolverThread(void* args){
 }
 
 int main(int argc, char *argv[]){
-    pthread_t requesterIDs[MAX_REQUESTER_THREADS];
+    pthread_t requesterIDs[MAX_REQUESTER_THREADS], resolverIDs[MAX_RESOLVER_THREADS];
     int i, numRequester, numResolver;
     int numInputs = argc > 5 ? argc - 5 : 0;
     char *ptr, *requesterLog, *resolverLog, *inputFiles[MAX_INPUT_FILES], *sharedBuffer[BUFFER_SIZE];
@@ -251,9 +251,19 @@ int main(int argc, char *argv[]){
         pthread_create(&requesterIDs[i], NULL, requesterThread, (void *)&tArgs);
     }
 
+    // Spawn resolver threads
+    for(i = 0; i < numResolver; i++){
+        pthread_create(&resolverIDs[i], NULL, resolverThread, (void *)&tArgs);
+    }
+
     // Join requester threads
     for(i = 0; i < numRequester; i++){
         pthread_join(requesterIDs[i], NULL);
+    }
+
+    // Join resolver threads
+    for(i = 0; i < numResolver; i++){
+        pthread_join(resolverIDs[i], NULL);
     }
 
     return 0;
