@@ -52,6 +52,7 @@ struct requestArg {
     int *currentBufferIndex;
     sem_t *space_available;
     sem_t *items_available;
+    pthread_mutex_t *accessLock;
 };
 
 void *requesterThread(void* args){
@@ -59,16 +60,21 @@ void *requesterThread(void* args){
     ssize_t numReadBytes;
 
     struct requestArg *reqArgs = (struct requestArg*) args;
+    pthread_mutex_t *accessLock = reqArgs->accessLock;
+    sem_t *space_available = reqArgs->space_available, *items_available = reqArgs->items_available;
 
     // TODO: Will be a critical section. Protect with mutex?
+    pthread_mutex_lock(accessLock);
     int currentInput = *reqArgs->currentInput;
     if(currentInput == reqArgs->numInputs){
         fprintf(stderr, "WARNING: Requester thread spawned with no more files to parse.\n");
+        pthread_mutex_unlock(accessLock);
         return NULL;
     }
 
     char *fName = reqArgs->inputFiles[currentInput];
     *reqArgs->currentInput += 1;
+    pthread_mutex_unlock(accessLock);
     // END CRITICAL SECTION
 
     FILE *fp = fopen(fName, "r");
@@ -83,11 +89,16 @@ void *requesterThread(void* args){
             lineBuff[numReadBytes - 1] = '\0';
 
         // CRITICAL SECTION
-        if (*reqArgs->currentBufferIndex != BUFFER_SIZE) {
-            // TODO: Since lineBuff is a pointer, does it getting changed change all of the values in the shared buffer?
-            reqArgs->sharedBuffer[*reqArgs->currentBufferIndex] = lineBuff;
-            *reqArgs->currentBufferIndex += 1;
-        }
+        sem_wait(space_available);
+        pthread_mutex_lock(accessLock);
+
+        reqArgs->sharedBuffer[*reqArgs->currentBufferIndex] = lineBuff;
+        *reqArgs->currentBufferIndex += 1;
+
+        pthread_mutex_unlock(accessLock);
+        sem_post(items_available);
+        // END CRITICAL SECTION
+
         printf("Line: \"%s\", %zu\n", lineBuff, numReadBytes);
     }
 
@@ -103,6 +114,7 @@ int main(int argc, char *argv[]){
     int numInputs = argc > 5 ? argc - 5 : 0;
     char *ptr, *requestLog, *resolveLog, *inputFiles[MAX_INPUT_FILES], *sharedBuffer[BUFFER_SIZE];
     sem_t space_available, items_available;
+    pthread_mutex_t accessLock;
 
     if (argc < 6){
         fprintf(stderr, "Too few arguments!\n");
@@ -142,9 +154,10 @@ int main(int argc, char *argv[]){
     for(i = 0; i < numInputs; i++)
         printf("\t%s\n", inputFiles[i]);
 
-    // init semaphores
+    // init semaphores & mutex
     sem_init(&space_available, 0, BUFFER_SIZE);
     sem_init(&items_available, 0, 0);
+    pthread_mutex_init(&accessLock, NULL);
 
     // create requester arg struct
     struct requestArg reqArgs;
@@ -155,6 +168,7 @@ int main(int argc, char *argv[]){
     reqArgs.space_available = &space_available;
     reqArgs.items_available = &items_available;
     reqArgs.currentBufferIndex = &currentBufferIndex;
+    reqArgs.accessLock = &accessLock;
 
     // TODO: Setup logging to file
 
