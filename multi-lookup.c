@@ -47,27 +47,28 @@ int dnsTest(){
 struct requestArg {
     char **inputFiles;
     int numInputs;
-    int *currentInput;
+    int currentInput;
     char *logFile;
     char **sharedBuffer;
-    int *currentBufferIndex;
+    int currentBufferIndex;
 };
 
 void *requesterThread(void* args){
     size_t lineBuffSize = MAX_NAME_LENGTH * sizeof(char);
     ssize_t numReadBytes;
 
-    struct requestArg reqArgs = *(struct requestArg*) args;
+    struct requestArg *reqArgs = (struct requestArg*) args;
 
     // TODO: Will be a critical section. Protect with mutex?
-    int currentInput = *reqArgs.currentInput;
-    if(currentInput == reqArgs.numInputs){
+    int currentInput = reqArgs->currentInput;
+    if(currentInput == reqArgs->numInputs){
         fprintf(stderr, "WARNING: Requester thread spawned with no more files to parse.\n");
+        // TODO: Ensure to free up mutex/semaphore before return
         return NULL;
     }
 
-    char *fName = reqArgs.inputFiles[currentInput];
-    *reqArgs.currentInput += 1;
+    char *fName = reqArgs->inputFiles[currentInput];
+    reqArgs->currentInput += 1;
     // END CRITICAL SECTION
 
     FILE *fp = fopen(fName, "r");
@@ -81,13 +82,16 @@ void *requesterThread(void* args){
         if(lineBuff[numReadBytes - 1] == '\n') // remove newline characters if found
             lineBuff[numReadBytes - 1] = '\0';
 
-        // CRITICAL SECTION
-        if (*reqArgs.currentBufferIndex != BUFFER_SIZE) {
-            // TODO: Since lineBuff is a pointer, does it getting changed change all of the values in the shared buffer?
-            reqArgs.sharedBuffer[*reqArgs.currentBufferIndex] = lineBuff;
-            *reqArgs.currentBufferIndex += 1;
-        }
         printf("Line: \"%s\", %zu\n", lineBuff, numReadBytes);
+
+        // CRITICAL SECTION
+        // TODO: Semaphore wait on the buffer being full
+        if (reqArgs->currentBufferIndex != BUFFER_SIZE) {
+            // TODO: Since lineBuff is a pointer, does it getting changed change all of the values in the shared buffer?
+            reqArgs->sharedBuffer[reqArgs->currentBufferIndex] = lineBuff;
+            reqArgs->currentBufferIndex += 1;
+        }
+        // END CRITICAL SECTION
     }
 
     fclose(fp);
@@ -137,6 +141,7 @@ int main(int argc, char *argv[]){
     printf("Requester log: %s\n", requestLog);
     printf("Resolver log: %s\n", resolveLog);
     printf("Number of input files: %d\n", numInputs);
+
     printf("Input files:\n");
     for(i = 0; i < numInputs; i++)
         printf("\t%s\n", inputFiles[i]);
@@ -146,9 +151,9 @@ int main(int argc, char *argv[]){
     int currentRequesterInput = 0, currentBufferIndex = 0;
     reqArgs.numInputs = numInputs;
     reqArgs.inputFiles = inputFiles;
-    reqArgs.currentInput = &currentRequesterInput;
+    reqArgs.currentInput = currentRequesterInput;
     reqArgs.sharedBuffer = sharedBuffer;
-    reqArgs.currentBufferIndex = &currentBufferIndex;
+    reqArgs.currentBufferIndex = currentBufferIndex;
     // TODO: Setup logging to file
 
     // TODO: create resolver arg struct
