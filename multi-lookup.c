@@ -66,7 +66,7 @@ void *requesterThread(void* args){
     pthread_mutex_t *accessLock = reqArgs->accessLock;
     sem_t *space_available = reqArgs->space_available, *items_available = reqArgs->items_available;
 
-    // TODO: Will be a critical section. Protect with mutex?
+    // CRITICAL SECTION
     pthread_mutex_lock(accessLock);
     int currentInput = reqArgs->currentInput;
     if(currentInput == reqArgs->numInputs){
@@ -80,6 +80,7 @@ void *requesterThread(void* args){
     pthread_mutex_unlock(accessLock);
     // END CRITICAL SECTION
 
+    // TODO: deal with when more input files than threads
     FILE *fp = fopen(fName, "r");
     if (fp == NULL){
         fprintf(stderr, "Couldn't open file %s!\n", fName);
