@@ -101,6 +101,7 @@ void *requesterThread(void* args){
 int main(int argc, char *argv[]){
     pthread_t requesterIDs[MAX_REQUESTER_THREADS];
     int i, numRequester, numResolver;
+    int currentRequesterInput = 0, currentBufferIndex = 0;
     int numInputs = argc > 5 ? argc - 5 : 0;
     char *ptr, *requestLog, *resolveLog, *inputFiles[MAX_INPUT_FILES], *sharedBuffer[BUFFER_SIZE];
 
@@ -145,7 +146,6 @@ int main(int argc, char *argv[]){
 
     // create requester arg struct
     struct requestArg reqArgs;
-    int currentRequesterInput = 0, currentBufferIndex = 0;
     reqArgs.numInputs = numInputs;
     reqArgs.inputFiles = inputFiles;
     reqArgs.currentInput = currentRequesterInput;
