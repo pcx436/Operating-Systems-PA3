@@ -50,6 +50,8 @@ struct requestArg {
     char *logFile;
     char **sharedBuffer;
     int currentBufferIndex;
+    sem_t *space_available;
+    sem_t *items_available;
 };
 
 void *requesterThread(void* args){
@@ -104,6 +106,7 @@ int main(int argc, char *argv[]){
     int currentRequesterInput = 0, currentBufferIndex = 0;
     int numInputs = argc > 5 ? argc - 5 : 0;
     char *ptr, *requestLog, *resolveLog, *inputFiles[MAX_INPUT_FILES], *sharedBuffer[BUFFER_SIZE];
+    sem_t space_available, items_available;
 
     if (argc < 6){
         fprintf(stderr, "Too few arguments!\n");
@@ -144,6 +147,10 @@ int main(int argc, char *argv[]){
     for(i = 0; i < numInputs; i++)
         printf("\t%s\n", inputFiles[i]);
 
+    // init semaphores
+    sem_init(&space_available, 0, BUFFER_SIZE);
+    sem_init(&items_available, 0, 0);
+
     // create requester arg struct
     struct requestArg reqArgs;
     reqArgs.numInputs = numInputs;
@@ -151,6 +158,9 @@ int main(int argc, char *argv[]){
     reqArgs.currentInput = currentRequesterInput;
     reqArgs.sharedBuffer = sharedBuffer;
     reqArgs.currentBufferIndex = currentBufferIndex;
+    reqArgs.space_available = &space_available;
+    reqArgs.items_available = &items_available;
+
     // TODO: Setup logging to file
 
     // TODO: create resolver arg struct
