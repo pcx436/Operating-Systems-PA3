@@ -55,6 +55,15 @@ struct requestArg {
     pthread_mutex_t *accessLock;
 };
 
+struct resolveArg {
+    char *logFile;
+    char **sharedBuffer;
+    int *currentBufferIndex;
+    sem_t *space_available;
+    sem_t *items_available;
+    pthread_mutex_t *accessLock;
+};
+
 void *requesterThread(void* args){
     size_t lineBuffSize = MAX_NAME_LENGTH * sizeof(char);
     ssize_t numReadBytes;
