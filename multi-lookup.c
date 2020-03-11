@@ -140,6 +140,7 @@ void *resolverThread(void* args){
     }
 
     fclose(fp);
+    free(currentIP);
     return NULL;
 }
 
