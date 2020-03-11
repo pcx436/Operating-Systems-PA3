@@ -54,6 +54,8 @@ struct threadArgs {
     sem_t *space_available;
     sem_t *items_available;
     pthread_mutex_t *accessLock;
+    pthread_mutex_t *resolverLogLock;
+    pthread_mutex_t *requesterLogLock;
 };
 
 void *requesterThread(void* args){
@@ -144,7 +146,7 @@ int main(int argc, char *argv[]){
     int numInputs = argc > 5 ? argc - 5 : 0;
     char *ptr, *requesterLog, *resolverLog, *inputFiles[MAX_INPUT_FILES], *sharedBuffer[BUFFER_SIZE];
     sem_t space_available, items_available;
-    pthread_mutex_t accessLock;
+    pthread_mutex_t accessLock, requesterLogLock, resolverLogLock;
 
     if (argc < 6){
         fprintf(stderr, "Too few arguments!\n");
@@ -184,23 +186,31 @@ int main(int argc, char *argv[]){
     for(i = 0; i < numInputs; i++)
         printf("\t%s\n", inputFiles[i]);
 
-    // init semaphores & mutex
+    // init semaphores & mutexes
     sem_init(&space_available, 0, BUFFER_SIZE);
     sem_init(&items_available, 0, 0);
     pthread_mutex_init(&accessLock, NULL);
+    pthread_mutex_init(&requesterLogLock, NULL);
+    pthread_mutex_init(&resolverLogLock, NULL);
 
     // create requester arg struct
     struct threadArgs tArgs;
     tArgs.numInputs = numInputs;
     tArgs.inputFiles = inputFiles;
     tArgs.currentInput = 0;
-    tArgs.sharedBuffer = sharedBuffer;
-    tArgs.space_available = &space_available;
-    tArgs.items_available = &items_available;
     tArgs.currentBufferIndex = 0;
-    tArgs.accessLock = &accessLock;
     tArgs.resolverLog = resolverLog;
     tArgs.requesterLog = requesterLog;
+    tArgs.sharedBuffer = sharedBuffer;
+
+    // assign semaphores
+    tArgs.space_available = &space_available;
+    tArgs.items_available = &items_available;
+
+    // assign mutexes
+    tArgs.accessLock = &accessLock;
+    tArgs.resolverLogLock = &resolverLogLock;
+    tArgs.requesterLogLock = &requesterLogLock;
 
     // TODO: Setup logging to file
 
