@@ -120,6 +120,19 @@ void *resolverThread(void* args){
     struct resolveArg *resArg = (struct resolveArg *)args;
     sem_t *space_available = resArg->space_available, *items_available = resArg->items_available;
     pthread_mutex_t *accessLock = resArg->accessLock;
+
+    // CRITICAL SECTION - file access
+    pthread_mutex_lock(accessLock);
+    FILE *fp = fopen(resArg->logFile, "w");
+    pthread_mutex_unlock(accessLock);
+    // END CRITICAL SECTION
+    if(fp == NULL){
+        // yes, I'm access a shared resource, but it's not being modified so does it really matter?
+        fprintf(stderr, "Could not open resolver results file \"%s\"!\n", resArg->logFile);
+        return NULL;
+    }
+
+    fclose(fp);
     return NULL;
 }
 
