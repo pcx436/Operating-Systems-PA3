@@ -167,7 +167,7 @@ void *resolverThread(void* args){
         // END CRITICAL SECTION
 
         if(resolutionResult == UTIL_FAILURE){
-            fprintf(stderr, "Could not resolve name \"%s\"!\n", currentName);
+            fprintf(stderr, "Failure in resolution of \"%s\"!\n", currentName);
             free(currentName);
             free(currentIP);
 
