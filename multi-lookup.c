@@ -50,7 +50,7 @@ struct threadArgs {
     char *requesterLog;
     char *resolverLog;
     char **sharedBuffer;
-    int currentBufferIndex;
+    int numInBuffer;
     sem_t *space_available;
     sem_t *items_available;
     pthread_mutex_t *accessLock;
@@ -101,14 +101,14 @@ void *requesterThread(void* args){
         pthread_mutex_lock(accessLock);
 
         // Allocate space in the shared buffer and copy the line into it
-        reqArgs->sharedBuffer[reqArgs->currentBufferIndex] = (char *)malloc(MAX_NAME_LENGTH * sizeof(char));
-        strcpy(reqArgs->sharedBuffer[reqArgs->currentBufferIndex], lineBuff);
+        reqArgs->sharedBuffer[reqArgs->numInBuffer] = (char *)malloc(MAX_NAME_LENGTH * sizeof(char));
+        strcpy(reqArgs->sharedBuffer[reqArgs->numInBuffer], lineBuff);
         printf("Requester %zu line: \"%s\", %zuB, index %d\n",
                 pthread_self(),
-                reqArgs->sharedBuffer[reqArgs->currentBufferIndex],
+                reqArgs->sharedBuffer[reqArgs->numInBuffer],
                 numReadBytes,
-                reqArgs->currentBufferIndex);
-        reqArgs->currentBufferIndex += 1;
+                reqArgs->numInBuffer);
+        reqArgs->numInBuffer += 1;
 
         pthread_mutex_unlock(accessLock);
         sem_post(items_available);
