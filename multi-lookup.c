@@ -222,7 +222,8 @@ void *resolverThread(void* args){
 }
 
 int main(int argc, char *argv[]){
-    pthread_t requesterIDs[MAX_REQUESTER_THREADS], resolverIDs[MAX_RESOLVER_THREADS];
+    pthread_t requesterIDs[MAX_REQUESTER_THREADS];
+    pthread_t resolverIDs[MAX_RESOLVER_THREADS];
     int i, numRequester, numResolver;
     int numInputs = argc > 5 ? argc - 5 : 0;
     char *ptr, *requesterLog, *resolverLog, *inputFiles[MAX_INPUT_FILES], *sharedBuffer[BUFFER_SIZE];
@@ -258,6 +259,7 @@ int main(int argc, char *argv[]){
         inputFiles[i] = argv[5 + i];
     }
 
+    // Debug outputs
     printf("Number of requesters: %d\n", numRequester);
     printf("Number of resolvers: %d\n", numResolver);
     printf("Requester log: %s\n", requesterLog);
@@ -274,7 +276,7 @@ int main(int argc, char *argv[]){
     pthread_mutex_init(&requesterLogLock, NULL);
     pthread_mutex_init(&resolverLogLock, NULL);
 
-    // create requester arg struct
+    // create thread arg struct
     struct threadArgs tArgs;
     tArgs.numInputs = numInputs;
     tArgs.inputFiles = inputFiles;
@@ -314,6 +316,8 @@ int main(int argc, char *argv[]){
     for(i = 0; i < numResolver; i++){
         pthread_join(resolverIDs[i], NULL);
     }
+
+    // TODO: Print timing information as requested
 
     return 0;
 }
