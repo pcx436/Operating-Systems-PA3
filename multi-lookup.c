@@ -161,7 +161,6 @@ void *resolverThread(void* args){
 
         printf("Attempting to resolve \"%s\"\n", currentName);
         resolutionResult = dnslookup(currentName, currentIP, MAX_NAME_LENGTH);
-        free(currentName);
         resArg->numInBuffer--;
 
         pthread_mutex_unlock(accessLock);
@@ -169,13 +168,14 @@ void *resolverThread(void* args){
 
         if(resolutionResult == UTIL_FAILURE){
             fprintf(stderr, "Could not resolve name \"%s\"!\n", currentName);
-            pthread_mutex_unlock(accessLock);
+            free(currentName);
             free(currentIP);
 
             // FIXME: Should somehow return ERR_BAD_NAME or something...
             return NULL;
         }
         printf("Successfully resolved \"%s\" to \"%s\".\n", currentName, currentIP);
+        free(currentName);
 
         // open file to write something from the queue
         // pthread_mutex_lock(logLock);
