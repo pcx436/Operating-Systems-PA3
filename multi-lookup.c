@@ -172,14 +172,8 @@ void *resolverThread(void* args){
 
         if(resolutionResult == UTIL_FAILURE){
             fprintf(stderr, "Failure in resolution of \"%s\"!\n", currentName);
-            free(currentName);
-            free(currentIP);
-
-            // FIXME: Should somehow return ERR_BAD_NAME or something...
-            return NULL;
+            strcpy(currentName, ""); // write empty string for resolved IP in log file
         }
-        printf("Successfully resolved \"%s\" to \"%s\".\n", currentName, currentIP);
-        free(currentName);
 
         // CRITICAL SECTION
         // open file to write something from the queue
@@ -191,6 +185,8 @@ void *resolverThread(void* args){
             // pthread_mutex_unlock(logLock);
             pthread_mutex_unlock(accessLock);
             free(currentIP);
+            free(currentName);
+            free(lineToWrite);
 
             // FIXME: Should somehow return ERR_BAD_FILE or something...
             return NULL;
