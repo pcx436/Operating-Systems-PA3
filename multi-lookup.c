@@ -177,6 +177,7 @@ void *resolverThread(void* args){
         printf("Successfully resolved \"%s\" to \"%s\".\n", currentName, currentIP);
         free(currentName);
 
+        // CRITICAL SECTION
         // open file to write something from the queue
         // pthread_mutex_lock(logLock);
         FILE *fp = fopen(logFileName, "a");
@@ -202,6 +203,7 @@ void *resolverThread(void* args){
         }
 
         fclose(fp);
+        // END CRITICAL SECTION
 
         // CRITICAL SECTION
         pthread_mutex_lock(accessLock);
