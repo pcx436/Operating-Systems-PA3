@@ -148,7 +148,10 @@ void *resolverThread(void* args){
         printf("Resolver %zu beginning loop\n", pthread_self());
         // CRITICAL SECTION - shared buffer error check & name retrieval
         sem_wait(items_available);
+        printf("Resolver %zu has determined there are items available\n", pthread_self());
+
         pthread_mutex_lock(accessLock);
+        printf("Resolver %zu past access lock\n", pthread_self());
 
         // retrieve name
         currentName = resArg->sharedBuffer[resArg->numInBuffer - 1];
@@ -224,6 +227,11 @@ void *resolverThread(void* args){
         // break if requesters have gone through all the files and nothing in shared buffer
         if(resArg->currentInput == resArg->numInputs && resArg->numInBuffer == 0)
             break;
+
+        printf("Resolver %zu will continue:\n", pthread_self());
+        printf("\tcurrentInput\t%d\n", resArg->currentInput);
+        printf("\tnumInputs\t%d\n", resArg->numInputs);
+        printf("\tnumInBuffer\t%d\n", resArg->numInBuffer);
 
         pthread_mutex_unlock(accessLock);
         sem_post(space_available);
