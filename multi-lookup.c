@@ -69,9 +69,11 @@ void *requesterThread(void* args){
     // CRITICAL SECTION
     pthread_mutex_lock(accessLock);
     int currentInput = reqArgs->currentInput;
+
     if(currentInput == reqArgs->numInputs){
         fprintf(stderr, "WARNING: Requester thread spawned with no more files to parse.\n");
         pthread_mutex_unlock(accessLock);
+
         return NULL;
     }
 
@@ -108,6 +110,7 @@ void *requesterThread(void* args){
 
     fclose(fp);
     free(lineBuff);
+
     return NULL;
 }
 
