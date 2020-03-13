@@ -149,6 +149,7 @@ void *resolverThread(void* args){
 
     // FIXME: Bad practice to have while(1), fix with bool instead of break?
     while(1){
+        printf("Resolver %zu beginning loop\n", pthread_self());
         // CRITICAL SECTION - shared buffer error check & name retrieval
         sem_wait(items_available);
         pthread_mutex_lock(accessLock);
@@ -156,10 +157,11 @@ void *resolverThread(void* args){
         // TODO: Hopefully a temporary check while I flesh out this idea. Shouldn't get here without a race condition
         if(resArg->numInBuffer == -1){
             pthread_mutex_unlock(accessLock);
-            fprintf(stderr, "Number of items in buffer is -1 but trying to take from buffer!\n");
+            fprintf(stderr, "Resolver %zu found -1 items in the buffer!\n", pthread_self());
             free(currentIP);
             free(lineToWrite);
 
+            // FIXME: Should return useful error
             return NULL;
         }
 
@@ -171,7 +173,7 @@ void *resolverThread(void* args){
         // END CRITICAL SECTION
 
         // resolve IP
-        printf("Attempting to resolve \"%s\"\n", currentName);
+        printf("Resolver %zu attempting to resolve \"%s\"\n", pthread_self(), currentName);
         resolutionResult = dnslookup(currentName, currentIP, MAX_IP_LENGTH);
 
         if(resolutionResult == UTIL_FAILURE){
@@ -187,22 +189,25 @@ void *resolverThread(void* args){
         // cleanup
         free(currentName);
 
-        printf("Resolver will attempt to write line \"%s\"\n", lineToWrite);
+        printf("Resolver %zu waiting to write line \"%s\"...\n", pthread_self(), lineToWrite);
 
         // CRITICAL SECTION - log writing
         pthread_mutex_lock(logLock);
+
+        printf("Resolver %zu now writing line \"%s\"\n", pthread_self(), lineToWrite);
 
         FILE *fp = fopen(logFileName, "a");
         if(fp == NULL){
             pthread_mutex_unlock(logLock);
             // END CRITICAL SECTION - log writing
-            fprintf(stderr, "Could not open resolver results file \"%s\"!\n", logFileName);
+            fprintf(stderr, "Resolver %zu could not open log file \"%s\"!\n", pthread_self(), logFileName);
             free(currentIP);
             free(lineToWrite);
 
             // FIXME: Should somehow return ERR_BAD_FILE or something...
             return NULL;
         }
+        printf("Resolver %zu successfully opened log file \"%s\"\n", pthread_self(), logFileName);
 
         // write to file
         if(fputs(lineToWrite, fp) == EOF){
@@ -210,7 +215,10 @@ void *resolverThread(void* args){
             pthread_mutex_unlock(logLock);
             // END CRITICAL SECTION - log writing
 
-            fprintf(stderr, "Could not write \"%s\" to \"%s\"!\n", lineToWrite, logFileName);
+            fprintf(stderr, "Resolver %zu could not write \"%s\" to \"%s\"!\n",
+                    pthread_self(),
+                    lineToWrite,
+                    logFileName);
 
             // cleanup
             free(currentIP);
@@ -223,6 +231,7 @@ void *resolverThread(void* args){
         fclose(fp);
         pthread_mutex_unlock(logLock);
         // END CRITICAL SECTION - log writing
+        printf("Resolver %zu successfully wrote line \"%s\" to log\n", pthread_self(), lineToWrite);
 
         // CRITICAL SECTION - loop condition
         pthread_mutex_lock(accessLock);
@@ -237,6 +246,7 @@ void *resolverThread(void* args){
         // END CRITICAL SECTION - loop condition
     }
 
+    printf("Resolver %zu terminating\n", pthread_self());
     free(currentIP);
     free(lineToWrite);
     return NULL;
