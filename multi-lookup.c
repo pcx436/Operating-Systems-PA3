@@ -149,29 +149,30 @@ void *resolverThread(void* args){
 
     // FIXME: Bad practice to have while(1), fix with bool instead of break?
     while(1){
-        // CRITICAL SECTION
+        // CRITICAL SECTION - shared buffer error check & name retrieval
         sem_wait(items_available);
         pthread_mutex_lock(accessLock);
 
         // TODO: Hopefully a temporary check while I flesh out this idea. Shouldn't get here without a race condition
         if(resArg->numInBuffer == -1){
+            pthread_mutex_unlock(accessLock);
             fprintf(stderr, "Number of items in buffer is -1 but trying to take from buffer!\n");
             free(currentIP);
             free(lineToWrite);
-            pthread_mutex_unlock(accessLock);
 
             return NULL;
         }
 
         // retrieve name
         currentName = resArg->sharedBuffer[resArg->numInBuffer - 1];
-
-        printf("Attempting to resolve \"%s\"\n", currentName);
-        resolutionResult = dnslookup(currentName, currentIP, MAX_IP_LENGTH);
         resArg->numInBuffer--;
 
         pthread_mutex_unlock(accessLock);
         // END CRITICAL SECTION
+
+        // resolve IP
+        printf("Attempting to resolve \"%s\"\n", currentName);
+        resolutionResult = dnslookup(currentName, currentIP, MAX_IP_LENGTH);
 
         if(resolutionResult == UTIL_FAILURE){
             fprintf(stderr, "Failure in resolution of \"%s\"!\n", currentName);
@@ -207,6 +208,7 @@ void *resolverThread(void* args){
         if(fputs(lineToWrite, fp) == EOF){
             fclose(fp);
             pthread_mutex_unlock(logLock);
+            // END CRITICAL SECTION - log writing
             fprintf(stderr, "Could not write \"%s\" to \"%s\"!\n", currentIP, currentName);
 
             // cleanup
@@ -219,8 +221,9 @@ void *resolverThread(void* args){
 
         fclose(fp);
         pthread_mutex_unlock(logLock);
+        // END CRITICAL SECTION - log writing
 
-        // CRITICAL SECTION
+        // CRITICAL SECTION - loop condition
         pthread_mutex_lock(accessLock);
 
         // break if requesters have gone through all the files and nothing in shared buffer
@@ -230,7 +233,7 @@ void *resolverThread(void* args){
         pthread_mutex_unlock(accessLock);
         sem_post(space_available);
 
-        // END CRITICAL SECTION
+        // END CRITICAL SECTION - loop condition
     }
 
     free(currentIP);
