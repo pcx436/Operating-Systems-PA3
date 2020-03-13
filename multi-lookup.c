@@ -141,8 +141,6 @@ void *resolverThread(void* args){
 
     // FIXME: Bad practice to have while(1), fix with bool instead of break?
     while(1){
-        printf("RESOLVER\n");
-
         // CRITICAL SECTION
         sem_wait(items_available);
         pthread_mutex_lock(accessLock);
