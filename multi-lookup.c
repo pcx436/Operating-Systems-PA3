@@ -84,6 +84,7 @@ void *requesterThread(void* args){
     // END CRITICAL SECTION
 
     // TODO: deal with when more input files than threads
+    printf("Requester attempting to read file \"%s\"\n", fName);
     FILE *fp = fopen(fName, "r");
     if (fp == NULL){
         fprintf(stderr, "Couldn't open file %s!\n", fName);
