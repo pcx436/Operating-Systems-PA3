@@ -134,7 +134,7 @@ void *resolverThread(void* args){
     struct threadArgs *resArg = (struct threadArgs *)args;
     sem_t *space_available = resArg->space_available, *items_available = resArg->items_available;
     pthread_mutex_t *accessLock = resArg->accessLock;
-    // pthread_mutex_t *logLock = resArg->resolverLogLock;
+    pthread_mutex_t *logLock = resArg->resolverLogLock;
     char *currentIP = (char *)malloc(MAX_IP_LENGTH * sizeof(char)), *currentName;
 
     char *lineToWrite = (char *)malloc(max_line_length);
@@ -188,12 +188,14 @@ void *resolverThread(void* args){
 
         printf("Resolver will attempt to write line \"%s\"\n", lineToWrite);
 
+        // CRITICAL SECTION - log writing
+        pthread_mutex_lock(logLock);
+
         FILE *fp = fopen(logFileName, "a");
         if(fp == NULL){
+            pthread_mutex_unlock(logLock);
             // yes, it's access a shared resource, but it's not being modified so does it really matter?
             fprintf(stderr, "Could not open resolver results file \"%s\"!\n", logFileName);
-            // pthread_mutex_unlock(logLock);
-            pthread_mutex_unlock(accessLock);
             free(currentIP);
             free(lineToWrite);
 
@@ -203,8 +205,11 @@ void *resolverThread(void* args){
 
         // write to file
         if(fputs(lineToWrite, fp) == EOF){
-            fprintf(stderr, "Could not write \"%s\" to \"%s\"!\n", currentIP, currentName);
             fclose(fp);
+            pthread_mutex_unlock(logLock);
+            fprintf(stderr, "Could not write \"%s\" to \"%s\"!\n", currentIP, currentName);
+
+            // cleanup
             free(currentIP);
             free(lineToWrite);
 
@@ -213,7 +218,7 @@ void *resolverThread(void* args){
         }
 
         fclose(fp);
-        // END CRITICAL SECTION
+        pthread_mutex_unlock(logLock);
 
         // CRITICAL SECTION
         pthread_mutex_lock(accessLock);
@@ -222,7 +227,6 @@ void *resolverThread(void* args){
         if(resArg->currentInput == resArg->numInputs && resArg->numInBuffer == -1)
             break;
 
-        // pthread_mutex_unlock(logLock);
         pthread_mutex_unlock(accessLock);
         sem_post(space_available);
 
