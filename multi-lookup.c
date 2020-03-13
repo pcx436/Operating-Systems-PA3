@@ -176,7 +176,7 @@ void *resolverThread(void* args){
 
         if(resolutionResult == UTIL_FAILURE){
             fprintf(stderr, "Failure in resolution of \"%s\"!\n", currentName);
-            strcpy(currentName, ""); // write empty string for resolved IP in log file
+            strcpy(currentIP, ""); // write empty string for resolved IP in log file
         }
 
         // build line to write to file
@@ -209,7 +209,8 @@ void *resolverThread(void* args){
             fclose(fp);
             pthread_mutex_unlock(logLock);
             // END CRITICAL SECTION - log writing
-            fprintf(stderr, "Could not write \"%s\" to \"%s\"!\n", currentIP, currentName);
+
+            fprintf(stderr, "Could not write \"%s\" to \"%s\"!\n", lineToWrite, logFileName);
 
             // cleanup
             free(currentIP);
