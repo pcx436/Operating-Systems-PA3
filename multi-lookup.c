@@ -185,6 +185,7 @@ void *resolverThread(void* args){
             fprintf(stderr, "Could not open resolver results file \"%s\"!\n", logFileName);
             // pthread_mutex_unlock(logLock);
             pthread_mutex_unlock(accessLock);
+            free(currentIP);
 
             // FIXME: Should somehow return ERR_BAD_FILE or something...
             return NULL;
@@ -193,6 +194,11 @@ void *resolverThread(void* args){
         // write to file
         if(fputs(currentIP, fp) == EOF){
             fprintf(stderr, "Could not write \"%s\" to \"%s\"!\n", currentIP, currentName);
+            fclose(fp);
+            free(currentIP);
+
+            // FIXME: Should return helpful error
+            return NULL;
         }
 
         fclose(fp);
