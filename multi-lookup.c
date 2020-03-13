@@ -279,7 +279,7 @@ int main(int argc, char *argv[]){
     tArgs.numInputs = numInputs;
     tArgs.inputFiles = inputFiles;
     tArgs.currentInput = 0;
-    tArgs.currentBufferIndex = 0;
+    tArgs.numInBuffer = -1;
     tArgs.resolverLog = resolverLog;
     tArgs.requesterLog = requesterLog;
     tArgs.sharedBuffer = sharedBuffer;
