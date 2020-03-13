@@ -100,6 +100,10 @@ void *requesterThread(void* args){
         sem_wait(space_available);
         pthread_mutex_lock(accessLock);
 
+        // ensure we use the 0th index if adding first item
+        if(reqArgs->numInBuffer == -1)
+            reqArgs->numInBuffer = 0;
+
         // Allocate space in the shared buffer and copy the line into it
         reqArgs->sharedBuffer[reqArgs->numInBuffer] = (char *)malloc(MAX_NAME_LENGTH * sizeof(char));
         strcpy(reqArgs->sharedBuffer[reqArgs->numInBuffer], lineBuff);
@@ -137,27 +141,47 @@ void *resolverThread(void* args){
 
     // FIXME: Bad practice to have while(1), fix with bool instead of break?
     while(1){
+        printf("RESOLVER\n");
+
+        // CRITICAL SECTION
         sem_wait(items_available);
         pthread_mutex_lock(accessLock);
 
-        // retrieve name and decrement (in that order)
-        currentName = resArg->sharedBuffer[resArg->currentBufferIndex--];
+        // TODO: Hopefully a temporary check while I flesh out this idea
+        if(resArg->numInBuffer == -1){
+            fprintf(stderr, "Number of items in buffer is -1 but trying to take from buffer!\n");
+            free(currentIP);
+            pthread_mutex_unlock(accessLock);
+
+            return NULL;
+        }
+
+        // retrieve name
+        currentName = resArg->sharedBuffer[resArg->numInBuffer - 1];
+
+        printf("Attempting to resolve \"%s\"\n", currentName);
         resolutionResult = dnslookup(currentName, currentIP, MAX_NAME_LENGTH);
+        free(currentName);
+        resArg->numInBuffer--;
+
+        pthread_mutex_unlock(accessLock);
+        // END CRITICAL SECTION
 
         if(resolutionResult == UTIL_FAILURE){
             fprintf(stderr, "Could not resolve name \"%s\"!\n", currentName);
             pthread_mutex_unlock(accessLock);
-
             free(currentIP);
+
             // FIXME: Should somehow return ERR_BAD_NAME or something...
             return NULL;
         }
+        printf("Successfully resolved \"%s\" to \"%s\".\n", currentName, currentIP);
 
         // open file to write something from the queue
         // pthread_mutex_lock(logLock);
         FILE *fp = fopen(logFileName, "a");
         if(fp == NULL){
-            // yes, I'm access a shared resource, but it's not being modified so does it really matter?
+            // yes, it's access a shared resource, but it's not being modified so does it really matter?
             fprintf(stderr, "Could not open resolver results file \"%s\"!\n", logFileName);
             // pthread_mutex_unlock(logLock);
             pthread_mutex_unlock(accessLock);
