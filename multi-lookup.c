@@ -123,9 +123,9 @@ void *requesterThread(void* args){
 
 void *resolverThread(void* args){
     // variable declarations
-    // max line length defined by max IP length (including null char) + max name length (including null char) +
-    // a comma + null char
-    const size_t max_line_length = (MAX_IP_LENGTH + MAX_NAME_LENGTH) * sizeof(char);
+    // max line length defined by max IP length (including null char) + a comma + max name length (including null char)
+    // + newline + null
+    const size_t max_line_length = (MAX_IP_LENGTH + MAX_NAME_LENGTH + 1) * sizeof(char);
 
     struct threadArgs *resArg = (struct threadArgs *)args;
     sem_t *space_available = resArg->space_available, *items_available = resArg->items_available;
@@ -195,7 +195,7 @@ void *resolverThread(void* args){
         printf("Resolver %zu successfully opened log file \"%s\"\n", pthread_self(), logFileName);
 
         // write to file
-        if(fputs(lineToWrite, fp) == EOF){
+        if(fprintf(fp, "%s\n", lineToWrite) < 0){
             fclose(fp);
             pthread_mutex_unlock(logLock);
             // END CRITICAL SECTION - log writing
