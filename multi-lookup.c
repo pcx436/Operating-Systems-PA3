@@ -100,10 +100,6 @@ void *requesterThread(void* args){
         sem_wait(space_available);
         pthread_mutex_lock(accessLock);
 
-        // ensure we use the 0th index if adding first item
-        if(reqArgs->numInBuffer == -1)
-            reqArgs->numInBuffer = 0;
-
         // Allocate space in the shared buffer and copy the line into it
         reqArgs->sharedBuffer[reqArgs->numInBuffer] = (char *)malloc(MAX_NAME_LENGTH * sizeof(char));
         strcpy(reqArgs->sharedBuffer[reqArgs->numInBuffer], lineBuff);
@@ -153,17 +149,6 @@ void *resolverThread(void* args){
         // CRITICAL SECTION - shared buffer error check & name retrieval
         sem_wait(items_available);
         pthread_mutex_lock(accessLock);
-
-        // TODO: Hopefully a temporary check while I flesh out this idea. Shouldn't get here without a race condition
-        if(resArg->numInBuffer == -1){
-            pthread_mutex_unlock(accessLock);
-            fprintf(stderr, "Resolver %zu found -1 items in the buffer!\n", pthread_self());
-            free(currentIP);
-            free(lineToWrite);
-
-            // FIXME: Should return useful error
-            return NULL;
-        }
 
         // retrieve name
         currentName = resArg->sharedBuffer[resArg->numInBuffer - 1];
@@ -237,7 +222,7 @@ void *resolverThread(void* args){
         pthread_mutex_lock(accessLock);
 
         // break if requesters have gone through all the files and nothing in shared buffer
-        if(resArg->currentInput == resArg->numInputs && resArg->numInBuffer == -1)
+        if(resArg->currentInput == resArg->numInputs && resArg->numInBuffer == 0)
             break;
 
         pthread_mutex_unlock(accessLock);
@@ -312,7 +297,7 @@ int main(int argc, char *argv[]){
     tArgs.numInputs = numInputs;
     tArgs.inputFiles = inputFiles;
     tArgs.currentInput = 0;
-    tArgs.numInBuffer = -1;
+    tArgs.numInBuffer = 0;
     tArgs.resolverLog = resolverLog;
     tArgs.requesterLog = requesterLog;
     tArgs.sharedBuffer = sharedBuffer;
