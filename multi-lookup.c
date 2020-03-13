@@ -93,21 +93,26 @@ void *requesterThread(void* args){
 
     lineBuff = (char *)malloc(lineBuffSize);
     while ((numReadBytes = getline(&lineBuff, &lineBuffSize, fp)) != -1){
-        if(lineBuff[numReadBytes - 1] == '\n') // remove newline characters if found
+        if(lineBuff[numReadBytes - 1] == '\n') // remove ending newline character if found
             lineBuff[numReadBytes - 1] = '\0';
 
         // CRITICAL SECTION
         sem_wait(space_available);
         pthread_mutex_lock(accessLock);
 
-        reqArgs->sharedBuffer[reqArgs->currentBufferIndex] = lineBuff;
+        // Allocate space in the shared buffer and copy the line into it
+        reqArgs->sharedBuffer[reqArgs->currentBufferIndex] = (char *)malloc(MAX_NAME_LENGTH * sizeof(char));
+        strcpy(reqArgs->sharedBuffer[reqArgs->currentBufferIndex], lineBuff);
+        printf("Requester %zu line: \"%s\", %zuB, index %d\n",
+                pthread_self(),
+                reqArgs->sharedBuffer[reqArgs->currentBufferIndex],
+                numReadBytes,
+                reqArgs->currentBufferIndex);
         reqArgs->currentBufferIndex += 1;
 
         pthread_mutex_unlock(accessLock);
         sem_post(items_available);
         // END CRITICAL SECTION
-
-        printf("Line: \"%s\", %zu\n", lineBuff, numReadBytes);
     }
 
     fclose(fp);
