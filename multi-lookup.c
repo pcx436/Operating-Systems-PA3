@@ -203,12 +203,18 @@ void *resolverThread(void* args){
 
         fclose(fp);
 
-        if(resArg->currentInput == resArg->numInputs && resArg->currentBufferIndex == 0)
+        // CRITICAL SECTION
+        pthread_mutex_lock(accessLock);
+
+        // break if requesters have gone through all the files and nothing in shared buffer
+        if(resArg->currentInput == resArg->numInputs && resArg->numInBuffer == -1)
             break;
 
         // pthread_mutex_unlock(logLock);
         pthread_mutex_unlock(accessLock);
         sem_post(space_available);
+
+        // END CRITICAL SECTION
     }
 
     free(currentIP);
