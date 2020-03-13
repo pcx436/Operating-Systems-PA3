@@ -160,7 +160,7 @@ void *resolverThread(void* args){
         currentName = resArg->sharedBuffer[resArg->numInBuffer - 1];
 
         printf("Attempting to resolve \"%s\"\n", currentName);
-        resolutionResult = dnslookup(currentName, currentIP, MAX_NAME_LENGTH);
+        resolutionResult = dnslookup(currentName, currentIP, MAX_IP_LENGTH);
         resArg->numInBuffer--;
 
         pthread_mutex_unlock(accessLock);
