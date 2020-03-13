@@ -126,6 +126,7 @@ void *requesterThread(void* args){
 }
 
 void *resolverThread(void* args){
+    // variable declarations
     struct threadArgs *resArg = (struct threadArgs *)args;
     sem_t *space_available = resArg->space_available, *items_available = resArg->items_available;
     pthread_mutex_t *accessLock = resArg->accessLock;
@@ -145,7 +146,7 @@ void *resolverThread(void* args){
         sem_wait(items_available);
         pthread_mutex_lock(accessLock);
 
-        // TODO: Hopefully a temporary check while I flesh out this idea
+        // TODO: Hopefully a temporary check while I flesh out this idea. Shouldn't get here without a race condition
         if(resArg->numInBuffer == -1){
             fprintf(stderr, "Number of items in buffer is -1 but trying to take from buffer!\n");
             free(currentIP);
