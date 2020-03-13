@@ -132,6 +132,10 @@ void *resolverThread(void* args){
     pthread_mutex_t *accessLock = resArg->accessLock;
     // pthread_mutex_t *logLock = resArg->resolverLogLock;
     char *currentIP = (char *)malloc(MAX_IP_LENGTH * sizeof(char)), *currentName;
+
+    // max line length defined by max IP length + max name length + a comma
+    char *lineToWrite = (char *)malloc((MAX_IP_LENGTH + MAX_NAME_LENGTH + 1) * sizeof(char));
+
     int resolutionResult;
 
     // CRITICAL SECTION - file access
@@ -150,6 +154,7 @@ void *resolverThread(void* args){
         if(resArg->numInBuffer == -1){
             fprintf(stderr, "Number of items in buffer is -1 but trying to take from buffer!\n");
             free(currentIP);
+            free(lineToWrite);
             pthread_mutex_unlock(accessLock);
 
             return NULL;
@@ -196,6 +201,7 @@ void *resolverThread(void* args){
             fprintf(stderr, "Could not write \"%s\" to \"%s\"!\n", currentIP, currentName);
             fclose(fp);
             free(currentIP);
+            free(lineToWrite);
 
             // FIXME: Should return helpful error
             return NULL;
@@ -219,6 +225,7 @@ void *resolverThread(void* args){
     }
 
     free(currentIP);
+    free(lineToWrite);
     return NULL;
 }
 
