@@ -195,7 +195,7 @@ void *resolverThread(void* args){
         FILE *fp = fopen(logFileName, "a");
         if(fp == NULL){
             pthread_mutex_unlock(logLock);
-            // yes, it's access a shared resource, but it's not being modified so does it really matter?
+            // END CRITICAL SECTION - log writing
             fprintf(stderr, "Could not open resolver results file \"%s\"!\n", logFileName);
             free(currentIP);
             free(lineToWrite);
