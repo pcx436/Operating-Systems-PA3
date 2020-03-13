@@ -127,14 +127,17 @@ void *requesterThread(void* args){
 
 void *resolverThread(void* args){
     // variable declarations
+    // max line length defined by max IP length (including null char) + max name length (including null char) +
+    // a comma + null char
+    const size_t max_line_length = (MAX_IP_LENGTH + MAX_NAME_LENGTH) * sizeof(char);
+
     struct threadArgs *resArg = (struct threadArgs *)args;
     sem_t *space_available = resArg->space_available, *items_available = resArg->items_available;
     pthread_mutex_t *accessLock = resArg->accessLock;
     // pthread_mutex_t *logLock = resArg->resolverLogLock;
     char *currentIP = (char *)malloc(MAX_IP_LENGTH * sizeof(char)), *currentName;
 
-    // max line length defined by max IP length + max name length + a comma
-    char *lineToWrite = (char *)malloc((MAX_IP_LENGTH + MAX_NAME_LENGTH + 1) * sizeof(char));
+    char *lineToWrite = (char *)malloc(max_line_length);
 
     int resolutionResult;
 
@@ -175,9 +178,16 @@ void *resolverThread(void* args){
             strcpy(currentName, ""); // write empty string for resolved IP in log file
         }
 
-        // CRITICAL SECTION
-        // open file to write something from the queue
-        // pthread_mutex_lock(logLock);
+        // build line to write to file
+        strncpy(lineToWrite, currentName, MAX_NAME_LENGTH);
+        strncat(lineToWrite, ",", sizeof(char));
+        strncat(lineToWrite, currentIP, MAX_IP_LENGTH);
+
+        // cleanup
+        free(currentName);
+
+        printf("Resolver will attempt to write line \"%s\"\n", lineToWrite);
+
         FILE *fp = fopen(logFileName, "a");
         if(fp == NULL){
             // yes, it's access a shared resource, but it's not being modified so does it really matter?
@@ -185,7 +195,6 @@ void *resolverThread(void* args){
             // pthread_mutex_unlock(logLock);
             pthread_mutex_unlock(accessLock);
             free(currentIP);
-            free(currentName);
             free(lineToWrite);
 
             // FIXME: Should somehow return ERR_BAD_FILE or something...
@@ -193,7 +202,7 @@ void *resolverThread(void* args){
         }
 
         // write to file
-        if(fputs(currentIP, fp) == EOF){
+        if(fputs(lineToWrite, fp) == EOF){
             fprintf(stderr, "Could not write \"%s\" to \"%s\"!\n", currentIP, currentName);
             fclose(fp);
             free(currentIP);
