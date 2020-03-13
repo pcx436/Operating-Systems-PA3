@@ -3,3 +3,7 @@ references
 multi-lookup
 CMakeFiles
 CMakeCache.txt
+
+cleanup.sh
+
+*.log
