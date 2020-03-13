@@ -65,6 +65,7 @@ void *requesterThread(void* args){
     struct threadArgs *reqArgs = (struct threadArgs*) args;
     pthread_mutex_t *accessLock = reqArgs->accessLock;
     sem_t *space_available = reqArgs->space_available, *items_available = reqArgs->items_available;
+    char *fName, *lineBuff;
 
     // CRITICAL SECTION
     pthread_mutex_lock(accessLock);
@@ -77,7 +78,7 @@ void *requesterThread(void* args){
         return NULL;
     }
 
-    char *fName = reqArgs->inputFiles[currentInput];
+    fName = reqArgs->inputFiles[currentInput];
     reqArgs->currentInput += 1;
     pthread_mutex_unlock(accessLock);
     // END CRITICAL SECTION
@@ -89,7 +90,7 @@ void *requesterThread(void* args){
         return NULL;
     }
 
-    char *lineBuff = (char *)malloc(lineBuffSize);
+    lineBuff = (char *)malloc(lineBuffSize);
     while ((numReadBytes = getline(&lineBuff, &lineBuffSize, fp)) != -1){
         if(lineBuff[numReadBytes - 1] == '\n') // remove newline characters if found
             lineBuff[numReadBytes - 1] = '\0';
