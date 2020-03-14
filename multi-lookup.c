@@ -248,11 +248,12 @@ void *resolverThread(void* args){
 int main(int argc, char *argv[]){
     pthread_t requesterIDs[MAX_REQUESTER_THREADS];
     pthread_t resolverIDs[MAX_RESOLVER_THREADS];
+    sem_t space_available, items_available;
+    pthread_mutex_t accessLock, requesterLogLock, resolverLogLock;
+
     int i, numRequester, numResolver;
     int numInputs = argc > 5 ? argc - 5 : 0;
     char *trashPointer, *requesterLog, *resolverLog, *inputFiles[MAX_INPUT_FILES], *sharedBuffer[BUFFER_SIZE];
-    sem_t space_available, items_available;
-    pthread_mutex_t accessLock, requesterLogLock, resolverLogLock;
 
     if (argc < 6){
         fprintf(stderr, "Too few arguments!\n");
