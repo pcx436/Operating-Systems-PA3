@@ -74,60 +74,54 @@ void *requesterThread(void* args){
 
     // CRITICAL SECTION
     pthread_mutex_lock(accessLock);
-    int currentInput = reqArgs->currentInput;
-
-    if(currentInput == reqArgs->numInputs){
-        fprintf(stderr, "WARNING: Requester thread spawned with no more files to parse.\n");
+    while(reqArgs->finishedInputs < reqArgs->numInputs) {
+        fName = reqArgs->inputFiles[reqArgs->currentInput];
+        reqArgs->currentInput += 1;
         pthread_mutex_unlock(accessLock);
-
-        // TODO: Should this return some error code? Check later
-        return NULL;
-    }
-
-    fName = reqArgs->inputFiles[currentInput];
-    reqArgs->currentInput += 1;
-    pthread_mutex_unlock(accessLock);
-    // END CRITICAL SECTION
-
-    // TODO: deal with when more input files than threads
-    printf("Requester attempting to read file \"%s\"\n", fName);
-    FILE *fp = fopen(fName, "r");
-    if (fp == NULL){
-        fprintf(stderr, "Couldn't open file %s!\n", fName);
-        return NULL;
-    }
-
-    lineBuff = (char *)malloc(lineBuffSize);
-    while ((numReadBytes = getline(&lineBuff, &lineBuffSize, fp)) != -1){
-        if(lineBuff[numReadBytes - 1] == '\n') // remove ending newline character if found
-            lineBuff[numReadBytes - 1] = '\0';
-
-        // CRITICAL SECTION
-        sem_wait(space_available);
-        pthread_mutex_lock(accessLock);
-
-        // Allocate space in the shared buffer and copy the line into it
-        reqArgs->sharedBuffer[reqArgs->numInBuffer] = (char *)malloc(MAX_NAME_LENGTH * sizeof(char));
-        strcpy(reqArgs->sharedBuffer[reqArgs->numInBuffer], lineBuff);
-        printf("Requester %zu line: \"%s\", %zuB, index %d\n",
-                pthread_self(),
-                reqArgs->sharedBuffer[reqArgs->numInBuffer],
-                numReadBytes,
-                reqArgs->numInBuffer);
-        reqArgs->numInBuffer += 1;
-
-        pthread_mutex_unlock(accessLock);
-        sem_post(items_available);
         // END CRITICAL SECTION
+
+        // TODO: deal with when more input files than threads
+        printf("Requester %zu attempting to read file \"%s\"\n", pthread_self(), fName);
+        fp = fopen(fName, "r");
+        if (fp == NULL) {
+            fprintf(stderr, "Requester %zu failed to open file \"%s\"!\n", pthread_self(), fName);
+            free(lineBuff);
+
+            return NULL;
+        }
+
+        while ((numReadBytes = getline(&lineBuff, &lineBuffSize, fp)) != -1) {
+            if (lineBuff[numReadBytes - 1] == '\n') // remove ending newline character if found
+                lineBuff[numReadBytes - 1] = '\0';
+
+            // CRITICAL SECTION
+            sem_wait(space_available);
+            pthread_mutex_lock(accessLock);
+
+            // Allocate space in the shared buffer and copy the line into it
+            reqArgs->sharedBuffer[reqArgs->numInBuffer] = (char *) malloc(MAX_NAME_LENGTH * sizeof(char));
+            strcpy(reqArgs->sharedBuffer[reqArgs->numInBuffer], lineBuff);
+            printf("Requester %zu line: \"%s\", %zuB, index %d\n",
+                   pthread_self(),
+                   reqArgs->sharedBuffer[reqArgs->numInBuffer],
+                   numReadBytes,
+                   reqArgs->numInBuffer);
+            reqArgs->numInBuffer += 1;
+
+            pthread_mutex_unlock(accessLock);
+            sem_post(items_available);
+            // END CRITICAL SECTION
+        }
+
+        // CRITICAL SECTION - finished input
+        pthread_mutex_lock(accessLock);
+        reqArgs->finishedInputs++;
+        pthread_mutex_unlock(accessLock);
+        // END CRITICAL SECTION - finished input
+
+        fclose(fp);
+        filesServiced++;
     }
-
-    // CRITICAL SECTION - finished input
-    pthread_mutex_lock(accessLock);
-    reqArgs->finishedInputs++;
-    pthread_mutex_unlock(accessLock);
-    // END CRITICAL SECTION - finished input
-
-    fclose(fp);
     free(lineBuff);
 
     return NULL;
