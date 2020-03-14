@@ -250,7 +250,7 @@ int main(int argc, char *argv[]){
     pthread_t resolverIDs[MAX_RESOLVER_THREADS];
     int i, numRequester, numResolver;
     int numInputs = argc > 5 ? argc - 5 : 0;
-    char *ptr, *requesterLog, *resolverLog, *inputFiles[MAX_INPUT_FILES], *sharedBuffer[BUFFER_SIZE];
+    char *trashPointer, *requesterLog, *resolverLog, *inputFiles[MAX_INPUT_FILES], *sharedBuffer[BUFFER_SIZE];
     sem_t space_available, items_available;
     pthread_mutex_t accessLock, requesterLogLock, resolverLogLock;
 
@@ -264,8 +264,8 @@ int main(int argc, char *argv[]){
     }
 
     // Parse CMD args
-    numRequester = (int)strtol(argv[1], &ptr, BASE);
-    numResolver = (int)strtol(argv[2], &ptr, BASE);
+    numRequester = (int)strtol(argv[1], &trashPointer, BASE);
+    numResolver = (int)strtol(argv[2], &trashPointer, BASE);
     requesterLog = argv[3];
     resolverLog = argv[4];
 
