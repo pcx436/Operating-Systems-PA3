@@ -357,8 +357,6 @@ int main(int argc, char *argv[]){
     tArgs.resolverLogLock = &resolverLogLock;
     tArgs.requesterLogLock = &requesterLogLock;
 
-    // TODO: Setup logging to file
-
     // Spawn requester threads
     for(i = 0; i < numRequester; i++){
         pthread_create(&requesterIDs[i], NULL, requesterThread, (void *)&tArgs);
