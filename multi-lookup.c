@@ -76,6 +76,7 @@ void *requesterThread(void* args){
         fprintf(stderr, "WARNING: Requester thread spawned with no more files to parse.\n");
         pthread_mutex_unlock(accessLock);
 
+        // TODO: Should this return some error code? Check later
         return NULL;
     }
 
