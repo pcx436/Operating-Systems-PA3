@@ -124,6 +124,31 @@ void *requesterThread(void* args){
     }
     free(lineBuff);
 
+    // CRITICAL SECTION - writing log file
+    pthread_mutex_lock(logLock);
+
+    // open file
+    fp = fopen(logName, "a");
+    if(fp == NULL){
+        pthread_mutex_unlock(logLock);
+        fprintf(stderr, "Requester %zu could not open log file \"%s\"\n", pthread_self(), logName);
+
+        // TODO: Change to ERR_BAD_REQ_LOG
+        return NULL;
+    }
+
+    // write file
+    if(fprintf(fp, "Requester %zu has serviced %d files\n", pthread_self(), filesServiced) < 0){
+        fclose(fp);
+        pthread_mutex_unlock(logLock);
+        fprintf(stderr, "Requester %zu failed to write to log \"%s\"", pthread_self(), logName);
+
+        // TODO: Change to some sort of write error
+        return NULL;
+    }
+
+    fclose(fp);
+    pthread_mutex_unlock(logLock);
     return NULL;
 }
 
