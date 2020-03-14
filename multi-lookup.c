@@ -62,14 +62,12 @@ void *requesterThread(void* args){
 
     // check not all files in progress
     while(reqArgs->finishedInputs < reqArgs->numInputs && reqArgs->currentInput < reqArgs->numInputs) {
-        printf("Requester %zu will continue\n", pthread_self());
         fName = reqArgs->inputFiles[reqArgs->currentInput];
         reqArgs->currentInput += 1;
         pthread_mutex_unlock(accessLock);
         // END CRITICAL SECTION
 
         // TODO: deal with when more input files than threads
-        printf("Requester %zu attempting to read file \"%s\"\n", pthread_self(), fName);
         fp = fopen(fName, "r");
         if (fp == NULL) {
             fprintf(stderr, "Requester %zu failed to open file \"%s\"!\n", pthread_self(), fName);
@@ -89,11 +87,6 @@ void *requesterThread(void* args){
             // Allocate space in the shared buffer and copy the line into it
             reqArgs->sharedBuffer[reqArgs->numInBuffer] = (char *) malloc(MAX_NAME_LENGTH * sizeof(char));
             strcpy(reqArgs->sharedBuffer[reqArgs->numInBuffer], lineBuff);
-            printf("Requester %zu line: \"%s\", %zuB, index %d\n",
-                   pthread_self(),
-                   reqArgs->sharedBuffer[reqArgs->numInBuffer],
-                   numReadBytes,
-                   reqArgs->numInBuffer);
             reqArgs->numInBuffer += 1;
 
             pthread_mutex_unlock(accessLock);
@@ -142,7 +135,6 @@ void *requesterThread(void* args){
     fclose(fp);
     pthread_mutex_unlock(logLock);
 
-    printf("Requester %zu terminating\n", pthread_self());
     return NULL;
 }
 
@@ -171,26 +163,13 @@ void *resolverThread(void* args){
     // CRITICAL SECTION - loop condition
     pthread_mutex_lock(accessLock);
 
-    printf("Resolver %zu starting:\n", pthread_self());
-    printf("\tcurrentInput\t%d\n", resArg->currentInput);
-    printf("\tnumInputs\t%d\n", resArg->numInputs);
-    printf("\tnumInBuffer\t%d\n", resArg->numInBuffer);
-
     while(resArg->finishedInputs < resArg->numInputs || resArg->numInBuffer != 0){
-        printf("Resolver %zu will continue:\n", pthread_self());
-        printf("\tcurrentInput\t%d\n", resArg->currentInput);
-        printf("\tnumInputs\t%d\n", resArg->numInputs);
-        printf("\tnumInBuffer\t%d\n", resArg->numInBuffer);
-
         pthread_mutex_unlock(accessLock);
         // END CRITICAL SECTION - loop condition
 
         // CRITICAL SECTION - shared buffer error check & name retrieval
         sem_wait(items_available);
-        printf("Resolver %zu has determined there are items available\n", pthread_self());
-
         pthread_mutex_lock(accessLock);
-        printf("Resolver %zu past access lock\n", pthread_self());
 
         // retrieve name
         currentName = resArg->sharedBuffer[resArg->numInBuffer - 1];
@@ -200,7 +179,6 @@ void *resolverThread(void* args){
         // END CRITICAL SECTION
 
         // resolve IP
-        printf("Resolver %zu attempting to resolve \"%s\"\n", pthread_self(), currentName);
         resolutionResult = dnslookup(currentName, currentIP, MAX_IP_LENGTH);
 
         if(resolutionResult == UTIL_FAILURE){
@@ -216,17 +194,14 @@ void *resolverThread(void* args){
         // cleanup
         free(currentName);
 
-        printf("Resolver %zu waiting to write line \"%s\"...\n", pthread_self(), lineToWrite);
-
         // CRITICAL SECTION - log writing
         pthread_mutex_lock(logLock);
-
-        printf("Resolver %zu now writing line \"%s\"\n", pthread_self(), lineToWrite);
 
         FILE *fp = fopen(logFileName, "a");
         if(fp == NULL){
             pthread_mutex_unlock(logLock);
             // END CRITICAL SECTION - log writing
+
             fprintf(stderr, "Resolver %zu could not open log file \"%s\"!\n", pthread_self(), logFileName);
             free(currentIP);
             free(lineToWrite);
@@ -234,7 +209,6 @@ void *resolverThread(void* args){
             // FIXME: Should somehow return ERR_BAD_FILE or something...
             return NULL;
         }
-        printf("Resolver %zu successfully opened log file \"%s\"\n", pthread_self(), logFileName);
 
         // write to file
         if(fprintf(fp, "%s\n", lineToWrite) < 0){
@@ -258,22 +232,16 @@ void *resolverThread(void* args){
         fclose(fp);
         pthread_mutex_unlock(logLock);
         // END CRITICAL SECTION - log writing
-        printf("Resolver %zu successfully wrote line \"%s\" to log\n", pthread_self(), lineToWrite);
 
         sem_post(space_available);
 
         // CRITICAL SECTION - loop condition
         pthread_mutex_lock(accessLock);
     }
-    printf("Resolver %zu final status:\n", pthread_self());
-    printf("\tcurrentInput\t%d\n", resArg->currentInput);
-    printf("\tnumInputs\t%d\n", resArg->numInputs);
-    printf("\tnumInBuffer\t%d\n", resArg->numInBuffer);
 
     pthread_mutex_unlock(accessLock);
     // END CRITICAL SECTION - loop condition
 
-    printf("Resolver %zu terminating\n", pthread_self());
     free(currentIP);
     free(lineToWrite);
     return NULL;
@@ -317,16 +285,6 @@ int main(int argc, char *argv[]){
     for (i = 0; i < numInputs; i++){
         inputFiles[i] = argv[5 + i];
     }
-
-    // Debug outputs
-    printf("Number of requesters: %d\n", numRequester);
-    printf("Number of resolvers: %d\n", numResolver);
-    printf("Requester log: %s\n", requesterLog);
-    printf("Resolver log: %s\n", resolverLog);
-    printf("Number of input files: %d\n", numInputs);
-    printf("Input files:\n");
-    for(i = 0; i < numInputs; i++)
-        printf("\t%s\n", inputFiles[i]);
 
     // init semaphores & mutexes
     sem_init(&space_available, 0, BUFFER_SIZE);
