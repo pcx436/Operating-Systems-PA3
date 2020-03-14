@@ -47,6 +47,7 @@ struct threadArgs {
     char **inputFiles;
     int numInputs;
     int currentInput;
+    int finishedInputs;
     char *requesterLog;
     char *resolverLog;
     char **sharedBuffer;
@@ -115,6 +116,12 @@ void *requesterThread(void* args){
         // END CRITICAL SECTION
     }
 
+    // CRITICAL SECTION - finished input
+    pthread_mutex_lock(accessLock);
+    reqArgs->finishedInputs++;
+    pthread_mutex_unlock(accessLock);
+    // END CRITICAL SECTION - finished input
+
     fclose(fp);
     free(lineBuff);
 
@@ -143,9 +150,19 @@ void *resolverThread(void* args){
     pthread_mutex_unlock(accessLock);
     // END CRITICAL SECTION
 
-    // FIXME: Bad practice to have while(1), fix with bool instead of break?
-    while(1){
-        printf("Resolver %zu beginning loop\n", pthread_self());
+    // CRITICAL SECTION - loop condition
+    // sem_wait(items_available);
+    pthread_mutex_lock(accessLock);
+
+    while(resArg->finishedInputs < resArg->numInputs || resArg->numInBuffer != 0){
+        printf("Resolver %zu will continue:\n", pthread_self());
+        printf("\tcurrentInput\t%d\n", resArg->currentInput);
+        printf("\tnumInputs\t%d\n", resArg->numInputs);
+        printf("\tnumInBuffer\t%d\n", resArg->numInBuffer);
+
+        pthread_mutex_unlock(accessLock);
+        // END CRITICAL SECTION - loop condition
+
         // CRITICAL SECTION - shared buffer error check & name retrieval
         sem_wait(items_available);
         printf("Resolver %zu has determined there are items available\n", pthread_self());
@@ -221,23 +238,18 @@ void *resolverThread(void* args){
         // END CRITICAL SECTION - log writing
         printf("Resolver %zu successfully wrote line \"%s\" to log\n", pthread_self(), lineToWrite);
 
-        // CRITICAL SECTION - loop condition
-        pthread_mutex_lock(accessLock);
-
-        // break if requesters have gone through all the files and nothing in shared buffer
-        if(resArg->currentInput == resArg->numInputs && resArg->numInBuffer == 0)
-            break;
-
-        printf("Resolver %zu will continue:\n", pthread_self());
-        printf("\tcurrentInput\t%d\n", resArg->currentInput);
-        printf("\tnumInputs\t%d\n", resArg->numInputs);
-        printf("\tnumInBuffer\t%d\n", resArg->numInBuffer);
-
-        pthread_mutex_unlock(accessLock);
         sem_post(space_available);
 
-        // END CRITICAL SECTION - loop condition
+        // CRITICAL SECTION - loop condition
+        pthread_mutex_lock(accessLock);
     }
+    printf("Resolver %zu final status:\n", pthread_self());
+    printf("\tcurrentInput\t%d\n", resArg->currentInput);
+    printf("\tnumInputs\t%d\n", resArg->numInputs);
+    printf("\tnumInBuffer\t%d\n", resArg->numInBuffer);
+
+    pthread_mutex_unlock(accessLock);
+    // END CRITICAL SECTION - loop condition
 
     printf("Resolver %zu terminating\n", pthread_self());
     free(currentIP);
@@ -306,6 +318,7 @@ int main(int argc, char *argv[]){
     tArgs.numInputs = numInputs;
     tArgs.inputFiles = inputFiles;
     tArgs.currentInput = 0;
+    tArgs.finishedInputs = 0;
     tArgs.numInBuffer = 0;
     tArgs.resolverLog = resolverLog;
     tArgs.requesterLog = requesterLog;
