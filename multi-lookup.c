@@ -271,11 +271,11 @@ int main(int argc, char *argv[]){
     resolverLog = argv[4];
 
     if (numRequester > MAX_REQUESTER_THREADS){
-        fprintf(stderr, "Max number of requester threads %d\n", MAX_REQUESTER_THREADS);
+        fprintf(stderr, "Exceeded max number of requester threads %d!\n", MAX_REQUESTER_THREADS);
         return ERR_NUM_REQUESTER;
     }
     else if (numResolver > MAX_RESOLVER_THREADS){
-        fprintf(stderr, "Max number of resolver threads %d\n", MAX_RESOLVER_THREADS);
+        fprintf(stderr, "Exceeded max number of resolver threads %d!\n", MAX_RESOLVER_THREADS);
         return ERR_NUM_RESOLVER;
     }
 
