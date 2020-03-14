@@ -64,9 +64,11 @@ void *requesterThread(void* args){
     ssize_t numReadBytes;
 
     struct threadArgs *reqArgs = (struct threadArgs*) args;
-    pthread_mutex_t *accessLock = reqArgs->accessLock;
+    pthread_mutex_t *accessLock = reqArgs->accessLock, *logLock = reqArgs->requesterLogLock;
     sem_t *space_available = reqArgs->space_available, *items_available = reqArgs->items_available;
-    char *fName, *lineBuff;
+    char *fName, *logName = reqArgs->requesterLog, *lineBuff = (char *) malloc(lineBuffSize);
+    FILE *fp;
+    int filesServiced = 0;
 
     // CRITICAL SECTION
     pthread_mutex_lock(accessLock);
