@@ -30,21 +30,6 @@
 #define BASE 10
 #define BUFFER_SIZE 25
 
-int dnsTest(){
-    int ret;
-    char s[30];
-
-    ret = dnslookup("google.com", s, 30);
-    if (ret == UTIL_SUCCESS){
-        printf("%s\n", s);
-        return 0;
-    }
-    else {
-        fprintf(stderr, "DNS FAILURE!\n");
-        return 1;
-    }
-}
-
 struct threadArgs {
     char **inputFiles;
     int numInputs;
