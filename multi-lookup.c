@@ -57,7 +57,7 @@ void *requesterThread(void* args){
     FILE *fp;
     int filesServiced = 0;
 
-    // CRITICAL SECTION
+    // CRITICAL SECTION - loop condition
     pthread_mutex_lock(accessLock);
 
     // check not all files in progress
@@ -65,9 +65,9 @@ void *requesterThread(void* args){
         fName = reqArgs->inputFiles[reqArgs->currentInput];
         reqArgs->currentInput += 1;
         pthread_mutex_unlock(accessLock);
-        // END CRITICAL SECTION
+        // END CRITICAL SECTION - loop condition
 
-        // TODO: deal with when more input files than threads
+        // open file
         fp = fopen(fName, "r");
         if (fp == NULL) {
             fprintf(stderr, "Requester %zu failed to open file \"%s\"!\n", pthread_self(), fName);
@@ -76,11 +76,12 @@ void *requesterThread(void* args){
             return NULL;
         }
 
+        // read all lines of file
         while ((numReadBytes = getline(&lineBuff, &lineBuffSize, fp)) != -1) {
             if (lineBuff[numReadBytes - 1] == '\n') // remove ending newline character if found
                 lineBuff[numReadBytes - 1] = '\0';
 
-            // CRITICAL SECTION
+            // CRITICAL SECTION - inputting to shared buffer
             sem_wait(space_available);
             pthread_mutex_lock(accessLock);
 
@@ -91,7 +92,7 @@ void *requesterThread(void* args){
 
             pthread_mutex_unlock(accessLock);
             sem_post(items_available);
-            // END CRITICAL SECTION
+            // END CRITICAL SECTION - inputting to shared buffer
         }
 
         // CRITICAL SECTION - finished input
