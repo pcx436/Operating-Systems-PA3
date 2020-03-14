@@ -144,6 +144,8 @@ void *requesterThread(void* args){
         return NULL;
     }
 
+    // test
+
     // write file
     if(fprintf(fp, "Requester %zu has serviced %d files\n", pthread_self(), filesServiced) < 0){
         fclose(fp);
