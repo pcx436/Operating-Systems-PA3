@@ -74,7 +74,10 @@ void *requesterThread(void* args){
 
     // CRITICAL SECTION
     pthread_mutex_lock(accessLock);
-    while(reqArgs->finishedInputs < reqArgs->numInputs) {
+
+    // check not all files in progress
+    while(reqArgs->finishedInputs < reqArgs->numInputs && reqArgs->currentInput < reqArgs->numInputs) {
+        printf("Requester %zu will continue\n", pthread_self());
         fName = reqArgs->inputFiles[reqArgs->currentInput];
         reqArgs->currentInput += 1;
         pthread_mutex_unlock(accessLock);
@@ -121,7 +124,11 @@ void *requesterThread(void* args){
 
         fclose(fp);
         filesServiced++;
+
+        // CRITICAL SECTION - loop condition
+        pthread_mutex_lock(accessLock);
     }
+    pthread_mutex_unlock(accessLock);
     free(lineBuff);
 
     // CRITICAL SECTION - writing log file
@@ -149,6 +156,8 @@ void *requesterThread(void* args){
 
     fclose(fp);
     pthread_mutex_unlock(logLock);
+
+    printf("Requester %zu terminating\n", pthread_self());
     return NULL;
 }
 
@@ -175,8 +184,12 @@ void *resolverThread(void* args){
     // END CRITICAL SECTION
 
     // CRITICAL SECTION - loop condition
-    // sem_wait(items_available);
     pthread_mutex_lock(accessLock);
+
+    printf("Resolver %zu starting:\n", pthread_self());
+    printf("\tcurrentInput\t%d\n", resArg->currentInput);
+    printf("\tnumInputs\t%d\n", resArg->numInputs);
+    printf("\tnumInBuffer\t%d\n", resArg->numInBuffer);
 
     while(resArg->finishedInputs < resArg->numInputs || resArg->numInBuffer != 0){
         printf("Resolver %zu will continue:\n", pthread_self());
