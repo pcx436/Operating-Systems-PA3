@@ -23,6 +23,8 @@
 #define ERR_LEN_IP 5
 #define ERR_FEW_ARGS 6
 #define ERR_BAD_INPUT 7
+#define ERR_BAD_REQ_LOG 8
+#define ERR_BAD_RES_LOG 9
 
 // CONSTANTS
 #define BASE 10
