@@ -10,7 +10,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS} -lpthread" )
 
 add_executable(multi-lookup
         util.c
-        util.h multi-lookup.c)
+        util.h multi-lookup.c multi-lookup.h)
 
 
 target_link_libraries(multi-lookup pthread)
