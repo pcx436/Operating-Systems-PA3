@@ -7,6 +7,7 @@
 #include <util.h>
 #include <stdlib.h>
 #include <semaphore.h>
+#include <sys/time.h>
 
 // LIMITS
 #define MAX_INPUT_FILES 10
@@ -253,6 +254,10 @@ int main(int argc, char *argv[]){
     pthread_t resolverIDs[MAX_RESOLVER_THREADS];
     sem_t space_available, items_available;
     pthread_mutex_t accessLock, requesterLogLock, resolverLogLock;
+    struct timeval startTime, endTime;
+    struct timezone zone;
+
+    gettimeofday(&startTime, &zone);
 
     int i, numRequester, numResolver;
     int numInputs = argc > 5 ? argc - 5 : 0;
@@ -334,7 +339,8 @@ int main(int argc, char *argv[]){
         pthread_join(resolverIDs[i], NULL);
     }
 
-    // TODO: Print timing information as requested
+    gettimeofday(&endTime, &zone);
+    printf("Total run time: %ld\n", endTime.tv_sec - startTime.tv_sec);
 
     return 0;
 }
