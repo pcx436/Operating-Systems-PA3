@@ -330,17 +330,26 @@ int main(int argc, char *argv[]){
     }
 
     // Join requester threads
+    int fullReturn = 0, *requesterReturns[numRequester], *resolverReturns[numResolver];
     for(i = 0; i < numRequester; i++){
-        pthread_join(requesterIDs[i], NULL);
+        pthread_join(requesterIDs[i], (void*)&requesterReturns[i]);
+
+        if(requesterReturns[i] != NULL && *requesterReturns[i] != 0){
+            fullReturn = *requesterReturns[i];
+        }
     }
 
     // Join resolver threads
     for(i = 0; i < numResolver; i++){
-        pthread_join(resolverIDs[i], NULL);
+        pthread_join(resolverIDs[i], (void *)&resolverReturns[i]);
+
+        if(resolverReturns[i] != NULL && *resolverReturns[i] != 0){
+            fullReturn = *resolverReturns[i];
+        }
     }
 
     gettimeofday(&endTime, &zone);
     printf("Total run time: %ld\n", endTime.tv_sec - startTime.tv_sec);
 
-    return 0;
+    return fullReturn;
 }
