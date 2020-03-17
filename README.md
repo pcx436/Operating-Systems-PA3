@@ -1,6 +1,21 @@
-order of approaching the assignment:
-1. single requester thread that reads one file at a time and write to an array
-1. create resolver thread that reads from shared array and writes result in results.txt file. Creates race condition with shared array. Use lock or semaphore or whatever. **NOTE** There is a limit for the size of the shared array in the writeup.
-1. Create more requester threads. Ensure that threads don't open the same file. Probably don't want multiple threads reading different lines in the same file; it introduces a race condition.
-1. Create more resolver threads that write to the file. Ensure they don't write over eachother.
-1. Make the requester threads write to the file they must output to. Ensure the file is protected so they don't accidentally write eachother again.
+# CSCI-3753 Operating Systems: Programming Assigment 3
+## Synopsis
+This project is for my Operating Systems class. It covers safe multi-threading in C when dealing with shared resources.
+The basic premise of the project is to setup a requester-resolver DNS system. We've been given the code for the actual
+DNS resolution, but we're tasked with having the requesters read in from the input files, add the lines to a shared
+buffer, and have the resolvers use the provided DNS functionality to resolve the addresses.
+
+## Build
+Just use the "make" command and it will build the `multi-lookup` executable.
+
+## Usage
+The command line arguments for the `multi-lookup` program are as follows:
+
+`./multi-lookup [Number of requester threads] [Number of resolver threads] [Requester log file] [Resolver log file]
+input1 input2....`
+
+## Credit
+This code was made by Jacob Malcy for CSCI-3753 (Spring 2020) at CU Boulder.
+
+## License
+MIT
