@@ -73,8 +73,10 @@ void *requesterThread(void* args){
         if (fp == NULL) {
             fprintf(stderr, "Requester %zu failed to open file \"%s\"!\n", pthread_self(), fName);
             free(lineBuff);
+            int *returnCode = (int *)malloc(sizeof(int));
+            *returnCode = ERR_BAD_INPUT;
 
-            return NULL;
+            return (void *)returnCode;
         }
 
         // read all lines of file
@@ -120,8 +122,10 @@ void *requesterThread(void* args){
         pthread_mutex_unlock(logLock);
         fprintf(stderr, "Requester %zu could not open log file \"%s\"\n", pthread_self(), logName);
 
-        // TODO: Change to ERR_BAD_REQ_LOG
-        return NULL;
+        int *returnCode = (int *)malloc(sizeof(int));
+        *returnCode = ERR_BAD_REQ_LOG;
+
+        return (void *)returnCode;
     }
 
     // write file
@@ -130,8 +134,10 @@ void *requesterThread(void* args){
         pthread_mutex_unlock(logLock);
         fprintf(stderr, "Requester %zu failed to write to log \"%s\"", pthread_self(), logName);
 
-        // TODO: Change to some sort of write error
-        return NULL;
+        int *returnCode = (int *)malloc(sizeof(int));
+        *returnCode = ERR_BAD_REQ_LOG;
+
+        return (void *)returnCode;
     }
 
     fclose(fp);
@@ -208,8 +214,10 @@ void *resolverThread(void* args){
             free(currentIP);
             free(lineToWrite);
 
-            // FIXME: Should somehow return ERR_BAD_FILE or something...
-            return NULL;
+            int *returnCode = (int *)malloc(sizeof(int));
+            *returnCode = ERR_BAD_RES_LOG;
+
+            return (void *)returnCode;
         }
 
         // write to file
@@ -227,8 +235,10 @@ void *resolverThread(void* args){
             free(currentIP);
             free(lineToWrite);
 
-            // FIXME: Should return helpful error
-            return NULL;
+            int *returnCode = (int *)malloc(sizeof(int));
+            *returnCode = ERR_BAD_RES_LOG;
+
+            return (void *)returnCode;
         }
 
         fclose(fp);
@@ -332,10 +342,11 @@ int main(int argc, char *argv[]){
     // Join requester threads
     int fullReturn = 0, *requesterReturns[numRequester], *resolverReturns[numResolver];
     for(i = 0; i < numRequester; i++){
-        pthread_join(requesterIDs[i], (void*)&requesterReturns[i]);
+        pthread_join(requesterIDs[i], (void *)&requesterReturns[i]);
 
-        if(requesterReturns[i] != NULL && *requesterReturns[i] != 0){
+        if(requesterReturns[i] != NULL){
             fullReturn = *requesterReturns[i];
+            free(requesterReturns[i]);
         }
     }
 
@@ -343,8 +354,9 @@ int main(int argc, char *argv[]){
     for(i = 0; i < numResolver; i++){
         pthread_join(resolverIDs[i], (void *)&resolverReturns[i]);
 
-        if(resolverReturns[i] != NULL && *resolverReturns[i] != 0){
+        if(resolverReturns[i] != NULL){
             fullReturn = *resolverReturns[i];
+            free(resolverReturns[i]);
         }
     }
 
